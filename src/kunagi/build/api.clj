@@ -11,7 +11,7 @@
 ;; * printing to console
 
 (defn print-done [& ss]
-  (print (c/green (c/bold "  ✓ ")))
+  (print (c/green (c/bold "✓ ")))
   (doseq [s ss]
     (print s)
     (print " "))
@@ -24,21 +24,31 @@
 (defn print-debug [data]
   (puget/cprint data))
 
-(defn print-error [message data exception]
-  (println)
-  (print " " (c/on-red (c/white (str " ERROR "))))
-  (print " ")
-  (println (c/bold message))
-  (when data
-    (print "    ")
-    (puget/cprint data))
-  (when exception
-    (-> exception .printStackTrace))
-  (println))
+(defn print-error
+  ([message]
+   (print-error message nil nil))
+  ([message data]
+   (print-error message data nil))
+  ([message data exception]
+   (println)
+   (print " " (c/on-red (c/white (str " ERROR "))))
+   (print " ")
+   (println (c/bold message))
+   (when data
+     (print "    ")
+     (puget/cprint data))
+   (when exception
+     (-> exception .printStackTrace))
+   (println)))
 
-(defn fail! [message data exception]
-  (print-error message data exception)
-  (System/exit 1))
+(defn fail!
+  ([message]
+   (fail! message nil nil))
+  ([message data]
+   (fail! message data nil))
+  ([message data exception]
+   (print-error message data exception)
+   (System/exit 1)))
 
 ;; * processes
 
