@@ -1,0 +1,8 @@
+{:paths ["src"]
+ :deps {;;
+        io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}
+        clojure-term-colors/clojure-term-colors {:mvn/version "0.1.0"}
+        mvxcvi/puget {:mvn/version "1.3.2"}
+        org.clojure/data.json {:mvn/version "2.4.0"}
+        ;;
+        }}
