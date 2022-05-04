@@ -82,7 +82,7 @@
                        :out)]
       (spit path formated))))
 
-;; ** package.json
+;; ** npm
 
 (defn package-json-add-dependency! [package-name package-version]
   (let [content (read-json-file "package.json")
@@ -92,3 +92,8 @@
                        (assoc-in content ["dependencies" package-name] package-version))
       (print-done "Updated dependency:" package-name package-version
                   (when existing-version (str "(was " existing-version ")"))))))
+
+(defn npm-reinstall! []
+  (print-task "npm-reinstall")
+  (b/delete {:path "node_modules"})
+  (process {:command-args ["npm" "install"]}))
