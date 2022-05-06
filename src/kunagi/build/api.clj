@@ -1,12 +1,15 @@
 (ns kunagi.build.api
   (:require
    [clojure.java.io :as io]
+   [clojure.edn :as edn]
+   [clojure.tools.build.api :as b]
    [clojure.data.json :as json]
    [clojure.term.colors :as c]
    [puget.printer :as puget]
-   [clojure.tools.build.api :as b]
+   [borkdude.rewrite-edn :as rw-edn]
    ;;
-   ))
+
+   [clojure.string :as str]))
 
 ;; * printing to console
 
@@ -67,6 +70,49 @@
                 process-params
                 ex))))
 
+;; * version
+
+(def version-edn-file-path "version.edn")
+(def latest-version-edn-file-path "latest-version.edn")
+
+(defn version []
+  (let [file (io/as-file version-edn-file-path)]
+    (if-not (-> file .exists)
+      {:major 0 :minor 0 :bugfix 0}
+      (-> file slurp edn/read-string))))
+
+(defn version->str [version]
+  (str (or (-> version :major) 0)
+       "."
+       (or (-> version :minor) 0)
+       "."
+       (or (-> version :bugfix) 0)))
+
+(comment
+  (version)
+  (-> (version) version->str))
+
+(defn bump-version--bugfix! []
+  (print-task "bump-version: bugfix")
+  (let [version (-> (version)
+                    (update :bugfix inc))]
+    (spit version-edn-file-path
+          (str (-> version pr-str)
+               "\n"))
+    (process {:command-args ["git" "add" version-edn-file-path latest-version-edn-file-path]})
+    (process {:command-args ["git" "commit" "-m" (str "[version bump] to " (version->str version))]})
+    (process {:command-args ["git" "push"]})
+    (print-done "Bumped to" (version->str version))))
+
+(comment
+  (bump-version--bugfix!))
+
+;; * testing
+
+(defn run-tests []
+  (print-task "testing")
+  (process {:command-args ["bin/kaocha"]}))
+
 ;; * git
 
 (defn assert-git-clean []
@@ -76,6 +122,70 @@
                   :out :capture})]
     (when out
       (fail! "git directory dirty" out))))
+
+(defn git-tag-with-version! []
+  (let [version (version)
+        git-version-tag (str "v" (version->str version))]
+    (process {:command-args ["git" "tag" git-version-tag]})
+    (print-done "Git tag created:" git-version-tag)
+    (process {:command-args ["git" "push" "origin" git-version-tag]})
+    (print-done "Git tag pushed to origin")
+    (let [git-sha (:out (process {:command-args ["git" "rev-parse" "HEAD"]
+                                  :output :capture}))]
+      (print-done "Git SHA determined:" git-sha)
+      (spit latest-version-edn-file-path
+            (str (pr-str {:version version
+                          :git/tag git-version-tag
+                          :git/sha git-sha})
+                 "\n"))
+      (print-done "Written" latest-version-edn-file-path))))
+
+;; * EDN (with rewrite)
+
+(defn read-edn-file-for-rewrite [path]
+  (let [file (io/as-file path)]
+    (when (-> file .exists)
+      (-> file
+          slurp
+          rw-edn/parse-string))))
+
+(comment
+  (def _deps-file (read-edn-file-for-rewrite "deps.edn"))
+  (def _deps (rw-edn/get _deps-file :deps))
+  (rw-edn/keys _deps))
+
+;; * deps
+
+(defn deps-edn-deps
+  [path-to-deps-edn]
+  (when-let [node (read-edn-file-for-rewrite path-to-deps-edn)]
+    (when-let [deps-node (rw-edn/get node :deps)]
+      (->> (rw-edn/keys deps-node)
+           (reduce (fn [m k]
+                     (assoc m k (rw-edn/sexpr (rw-edn/get deps-node k))))
+                   nil)))))
+
+(defn deps-edn-deps-with-local-root
+  [path-to-deps-edn]
+  (->> path-to-deps-edn
+       deps-edn-deps
+       (reduce (fn [acc [k v]]
+                 (if (get v :local/root)
+                   (conj acc k)
+                   acc))
+               nil)
+       seq))
+
+(comment
+  (deps-edn-deps-with-local-root "deps.edn"))
+
+(defn assert-deps-edn-has-no-local-deps!
+  ([]
+   (assert-deps-edn-has-no-local-deps! "deps.edn"))
+  ([path-to-deps-edn]
+   (print-task "assert-deps-edn-has-no-local-deps")
+   (when-let [deps (deps-edn-deps-with-local-root path-to-deps-edn)]
+     (fail! (str/join ", " deps)))))
 
 ;; * JSON
 
