@@ -35,8 +35,10 @@
    (print " ")
    (println (c/bold message))
    (when data
-     (print "    ")
-     (puget/cprint data))
+     ;; (print "    ")
+     (if (string? data)
+       (println (c/red data))
+       (puget/cprint data)))
    (when exception
      (-> exception .printStackTrace))
    (println)))
@@ -65,6 +67,16 @@
                 process-params
                 ex))))
 
+;; * git
+
+(defn assert-git-clean []
+  (print-task "assert-git-clean")
+  (let [{:keys [out]}
+        (process {:command-args ["git" "status" "-s"]
+                  :out :capture})]
+    (when out
+      (fail! "git directory dirty" out))))
+
 ;; * JSON
 
 (defn read-json-file [path]
@@ -91,7 +103,7 @@
       (write-json-file "package.json"
                        (assoc-in content ["dependencies" package-name] package-version))
       (print-done "Updated dependency:" package-name package-version
-                  (when existing-version (str "(was " existing-version ")"))))))
+                  (str "(was " existing-version ")")))))
 
 (defn npm-reinstall! []
   (print-task "npm-reinstall")
