@@ -1,5 +1,6 @@
 (ns kunagi.build.api
   (:require
+   [clojure.string :as str]
    [clojure.java.io :as io]
    [clojure.edn :as edn]
    [clojure.tools.build.api :as b]
@@ -8,8 +9,7 @@
    [puget.printer :as puget]
    [borkdude.rewrite-edn :as rw-edn]
    ;;
-
-   [clojure.string :as str]))
+))
 
 ;; * printing to console
 
@@ -130,8 +130,10 @@
     (print-done "Git tag created:" git-version-tag)
     (process {:command-args ["git" "push" "origin" git-version-tag]})
     (print-done "Git tag pushed to origin")
-    (let [git-sha (:out (process {:command-args ["git" "rev-parse" "HEAD"]
-                                  :output :capture}))]
+    (let [result (process {:command-args ["git" "rev-parse" "HEAD"]
+                           :out :capture})
+          git-sha (:out result)]
+      (when (str/blank? git-sha) (fail! "Missing Git SHA" result))
       (print-done "Git SHA determined:" git-sha)
       (spit latest-version-edn-file-path
             (str (pr-str {:version version
@@ -219,3 +221,12 @@
   (print-task "npm-reinstall")
   (b/delete {:path "node_modules"})
   (process {:command-args ["npm" "install"]}))
+
+;; * releasing
+
+(defn release! [{:keys []}]
+  (assert-git-clean)
+  (assert-deps-edn-has-no-local-deps!)
+  (run-tests)
+  (git-tag-with-version!)
+  (bump-version--bugfix!))
