@@ -37,6 +37,7 @@
                :dir project-path}))
 
 (defn build-kunagi-project-release [path]
+  (kb/print-task (str "build release: " path))
   (run-tests path)
   ;; (assert-deps-edn-has-no-local-deps!)
   ;; (git-tag-with-version!)
@@ -45,8 +46,9 @@
 
 (defn release-kunagi-project [sym]
   (assert-kunagi-project-ready-for-release sym)
-  (when (update-kunagi-project-release-repo sym)
-    (build-kunagi-project-release (releases-path sym))))
+  (let [files-changed? (update-kunagi-project-release-repo sym)]
+    (when files-changed?
+      (build-kunagi-project-release (release-path sym)))))
 
 (comment
   (release-kunagi-project 'kunagi-build))
