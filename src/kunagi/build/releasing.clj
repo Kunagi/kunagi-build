@@ -26,12 +26,13 @@
 
 (defn update-kunagi-project-release-repo [sym]
   (let [release-path (release-path sym)]
+    (kb/print-task (str "update release repo: " release-path))
     (kb/assert! (-> release-path io/as-file .exists)
                 "Release git exists:" release-path)
     (git/pull-ff release-path)))
 
 (defn run-tests [project-path]
-  (kb/print-task (str "testing: " project-path))
+  (kb/print-task (str "run tests: " project-path))
   (kb/process {:command-args ["bin/test"]
                :dir project-path}))
 
@@ -44,10 +45,8 @@
 
 (defn release-kunagi-project [sym]
   (assert-kunagi-project-ready-for-release sym)
-  (update-kunagi-project-release-repo sym)
-  (let [release-path (release-path sym)]
-    (when (git/pull-ff release-path)
-      (build-kunagi-project-release (releases-path sym)))))
+  (when (update-kunagi-project-release-repo sym)
+    (build-kunagi-project-release (releases-path sym))))
 
 (comment
   (release-kunagi-project 'kunagi-build))
