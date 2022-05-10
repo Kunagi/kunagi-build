@@ -2,7 +2,8 @@
   (:require
    [clojure.java.io :as io]
    [kunagi.build.core :as kb]
-   [kunagi.build.git :as git]))
+   [kunagi.build.git :as git]
+   [kunagi.build.deps :as deps]))
 
 (defn assert-kunagi-project-path-ready-for-release [project-path]
   (kb/assert! (-> project-path io/as-file .exists)
@@ -39,7 +40,7 @@
 (defn build-kunagi-project-release [path]
   (kb/print-task (str "build release: " path))
   (run-tests path)
-  ;; (assert-deps-edn-has-no-local-deps!)
+  (deps/assert-no-local-deps path)
   ;; (git-tag-with-version!)
   ;; (bump-version--bugfix!)
   )
