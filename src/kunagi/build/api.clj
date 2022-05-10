@@ -132,7 +132,7 @@
     (print-done "Git tag pushed to origin")
     (let [result (process {:command-args ["git" "rev-parse" "HEAD"]
                            :out :capture})
-          git-sha (:out result)]
+          git-sha (str/trim (:out result))]
       (when (str/blank? git-sha) (fail! "Missing Git SHA" result))
       (print-done "Git SHA determined:" git-sha)
       (spit latest-version-edn-file-path
@@ -164,7 +164,9 @@
     (when-let [deps-node (rw-edn/get node :deps)]
       (->> (rw-edn/keys deps-node)
            (reduce (fn [m k]
-                     (assoc m k (rw-edn/sexpr (rw-edn/get deps-node k))))
+                     (assoc m
+                            (rw-edn/sexpr k)
+                            (rw-edn/sexpr (rw-edn/get deps-node k))))
                    nil)))))
 
 (defn deps-edn-deps-with-local-root
@@ -179,7 +181,9 @@
        seq))
 
 (comment
-  (deps-edn-deps-with-local-root "deps.edn"))
+  (deps-edn-deps "deps.edn")
+  (deps-edn-deps-with-local-root "deps.edn")
+  )
 
 (defn assert-deps-edn-has-no-local-deps!
   ([]
@@ -188,6 +192,24 @@
    (print-task "assert-deps-edn-has-no-local-deps")
    (when-let [deps (deps-edn-deps-with-local-root path-to-deps-edn)]
      (fail! (str/join ", " deps)))))
+
+(defn switch-to-local-deps!
+  ([dep-symbols]
+   (switch-to-local-deps! "deps.edn" dep-symbols))
+  ([path-to-deps-edn dep-symbols]
+   (print-task (str "switch-to-local-deps: " path-to-deps-edn))
+   (let [node (read-edn-file-for-rewrite path-to-deps-edn)
+         deps-node (rw-edn/get node :deps)]
+     (doseq [sym dep-symbols]
+       (let [coord-node (rw-edn/get deps-node sym)
+             coord (rw-edn/sexpr coord-node)
+             local-root-value (get coord :local/root)]
+         (if local-root-value
+           (print-done sym "already" local-root-value)
+           (let [local-root-value (str "/p/" (name sym))
+                 updated-node (rw-edn/assoc-in node [:deps sym] {:local/root local-root-value})]
+             (println (str updated-node))
+             (print-done sym "switched to" local-root-value))))))))
 
 ;; * JSON
 
