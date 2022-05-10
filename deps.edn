@@ -4,7 +4,7 @@
         clojure-term-colors/clojure-term-colors {:mvn/version "0.1.0"}
         mvxcvi/puget {:mvn/version "1.3.2"}
         ;; borkdude/rewrite-edn {:mvn/version "0.2.0"}
-        bordkude/rewrite-edn {:local/root "../rewrite-edn"}
+        ;; bordkude/rewrite-edn {:local/root "../rewrite-edn"}
         org.clojure/data.json {:mvn/version "2.4.0"}
         ;;
         }
