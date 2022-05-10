@@ -45,8 +45,9 @@
 (defn release-kunagi-project [sym]
   (assert-kunagi-project-ready-for-release sym)
   (update-kunagi-project-release-repo sym)
-  (when (git/pull-ff release-path)
-    (build-kunagi-project-release (releases-path sym))))
+  (let [release-path (release-path sym)]
+    (when (git/pull-ff release-path)
+      (build-kunagi-project-release (releases-path sym)))))
 
 (comment
   (release-kunagi-project 'kunagi-build))
