@@ -28,14 +28,25 @@
   (let [release-path (release-path sym)]
     (kb/assert! (-> release-path io/as-file .exists)
                 "Release git exists:" release-path)
-    (let [changes? (git/pull-ff release-path)]
-      (kb/print-debug {:changes? changes?}))
-    ))
+    (git/pull-ff release-path)))
+
+(defn run-tests [project-path]
+  (kb/print-task (str "testing: " project-path))
+  (kb/process {:command-args ["bin/test"]
+               :dir project-path}))
+
+(defn build-kunagi-project-release [path]
+  (run-tests path)
+  ;; (assert-deps-edn-has-no-local-deps!)
+  ;; (git-tag-with-version!)
+  ;; (bump-version--bugfix!)
+  )
 
 (defn release-kunagi-project [sym]
   (assert-kunagi-project-ready-for-release sym)
   (update-kunagi-project-release-repo sym)
-  )
+  (when (git/pull-ff release-path)
+    (build-kunagi-project-release (releases-path sym))))
 
 (comment
   (release-kunagi-project 'kunagi-build))

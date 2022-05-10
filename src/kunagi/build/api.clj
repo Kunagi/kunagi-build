@@ -60,9 +60,7 @@
 
 ;; * testing
 
-(defn run-tests []
-  (print-task "testing")
-  (process {:command-args ["bin/kaocha"]}))
+
 
 ;; * git
 
@@ -281,11 +279,12 @@
     ))
 
 (defn release! [{:keys []}]
-  (run-tests)
+  ;; (run-tests)
   (assert-git-clean)
   (assert-deps-edn-has-no-local-deps!)
   (git-tag-with-version!)
-  (bump-version--bugfix!))
+  (bump-version--bugfix!)
+  )
 
 ;; (defn trigger-release! [{:keys []}]
 ;;   (assert-git-clean)
