@@ -8,67 +8,18 @@
    [clojure.term.colors :as c]
    [puget.printer :as puget]
    [borkdude.rewrite-edn :as rw-edn]
+   [kunagi.build.core :as kb]
    ;;
-   ))
 
-;; * printing to console
+   [kunagi.build.releasing :as releasing]))
 
-(defn print-done [& ss]
-  (print (c/green (c/bold "✓ ")))
-  (doseq [s ss]
-    (print s)
-    (print " "))
-  (println))
-
-(defn print-task [task-name]
-  (println)
-  (println (c/on-blue (c/white (c/bold (str " " task-name " "))))))
-
-(defn print-debug [data]
-  (puget/cprint data))
-
-(defn print-error
-  ([message]
-   (print-error message nil nil))
-  ([message data]
-   (print-error message data nil))
-  ([message data exception]
-   (println)
-   (print " " (c/on-red (c/white (str " ERROR "))))
-   (print " ")
-   (println (c/bold message))
-   (when data
-     ;; (print "    ")
-     (if (string? data)
-       (println (c/red data))
-       (puget/cprint data)))
-   (when exception
-     (-> exception .printStackTrace))
-   (println)))
-
-(defn fail!
-  ([message]
-   (fail! message nil nil))
-  ([message data]
-   (fail! message data nil))
-  ([message data exception]
-   (print-error message data exception)
-   (System/exit 1)))
-
-;; * processes
-
-(defn process [process-params]
-  (try (let [ret (b/process process-params)]
-         (when (-> ret :exit (not= 0))
-           (fail! (str "Process exited with error code "
-                       (-> ret :exit))
-                  process-params
-                  nil))
-         ret)
-       (catch Exception ex
-         (fail! "Starting process failed"
-                process-params
-                ex))))
+(def print-done kb/print-done)
+(def print-task kb/print-task)
+(def print-debug kb/print-debug)
+(def print-error kb/print-error)
+(def fail! kb/fail!)
+(def assert! kb/assert!)
+(def process kb/process)
 
 ;; * version
 
@@ -123,6 +74,21 @@
     (when out
       (fail! "git directory dirty" out))))
 
+(defn git-sha [local-repo-path]
+  (let [result (process {:command-args ["git" "rev-parse" "HEAD"]
+                         :dir local-repo-path
+                         :out :capture})
+        git-sha (str/trim (:out result))]
+    (when (str/blank? git-sha) (fail! "Missing Git SHA" result))
+    git-sha))
+
+(defn git-tag-of-head [local-repo-path]
+  (let [result (process {:command-args ["git" "tag" "-l" "--contains" "HEAD"]
+                         :dir local-repo-path
+                         :out :capture})
+        tag (str/trim (:out result))]
+    tag))
+
 (defn git-tag-with-version! []
   (let [version (version)
         git-version-tag (str "v" (version->str version))]
@@ -130,10 +96,7 @@
     (print-done "Git tag created:" git-version-tag)
     (process {:command-args ["git" "push" "origin" git-version-tag]})
     (print-done "Git tag pushed to origin")
-    (let [result (process {:command-args ["git" "rev-parse" "HEAD"]
-                           :out :capture})
-          git-sha (str/trim (:out result))]
-      (when (str/blank? git-sha) (fail! "Missing Git SHA" result))
+    (let [git-sha (git-sha nil)]
       (print-done "Git SHA determined:" git-sha)
       (spit latest-version-edn-file-path
             (str (pr-str {:version version
@@ -211,6 +174,16 @@
                    (str updated-node))
              (print-done sym "switched to" local-root-value))))))))
 
+(defn latest-version [local-repo-path]
+  (let [latest-version-file (io/as-file (str local-repo-path "/" latest-version-edn-file-path))
+        _ (when-not (-> latest-version-file .exists)
+            (fail! (str "Missing " latest-version-file)))
+        latest-version (read-string (slurp latest-version-file))
+        git-sha (get latest-version :git/sha)
+        _ (when-not git-sha
+            (fail! (str "Missing :git/sha in " latest-version-file)))]
+    latest-version))
+
 (defn switch-to-release-deps!
   ([]
    (switch-to-release-deps! "deps.edn"))
@@ -221,19 +194,26 @@
      (doseq [sym deps-with-local-root]
        (let [dep-path-node (rw-edn/get-in node [:deps sym :local/root])
              dep-path (rw-edn/sexpr dep-path-node)
-             latest-version-file (io/as-file (str dep-path "/" latest-version-edn-file-path))
-             _ (when-not (-> latest-version-file .exists)
-                 (fail! (str "Missing " latest-version-file)))
-             latest-version (read-string (slurp latest-version-file))
+             latest-version (latest-version dep-path)
              git-tag (get latest-version :git/tag)
              git-sha (get latest-version :git/sha)
-             _ (when-not git-sha
-                 (fail! (str "Missing :git/sha in " latest-version-file)))
              updated-node (rw-edn/assoc-in node [:deps sym] {:git/tag git-tag
                                                              :git/sha git-sha})]
          (spit path-to-deps-edn
                (str updated-node))
          (print-done sym "switched to" sym git-tag))))))
+
+(defn set-deps-edn-dep-to-sha [sym git-sha git-tag]
+  (print-task (str "set-deps-edn-dep-to-sha: " sym git-tag))
+  (let [node (read-edn-file-for-rewrite "deps.edn")
+        current-sha (rw-edn/get-in node [:deps sym :git/sha])]
+    (if (= git-sha current-sha)
+      (print-done sym "already on" git-tag)
+      (let [updated-node (rw-edn/assoc-in node [:deps sym]
+                                          {:git/tag git-tag :git/sha git-sha})]
+        (spit "deps.edn"
+              (str updated-node))
+        (print-done sym "switched to" git-tag)))))
 
 ;; * JSON
 
@@ -270,9 +250,66 @@
 
 ;; * releasing
 
+(defn prepare-local-dependency! [sym]
+  (print-task (str "prepare-local-dependency" sym))
+  (let [local-path (str "/p/" (name sym))]
+
+    ;; assert git clean
+    (let [{:keys [out]}
+          (process {:command-args ["git" "status" "-s"]
+                    :out :capture
+                    :dir local-path})]
+      (when out
+        (fail! "git directory dirty" out)))
+    (print-done "git is clean")
+
+    ;; git pull
+    (process {:command-args ["git" "pull"]
+              :dir local-path})
+    (print-done "local git repo updated")
+
+    ;; release if has changes
+    (let [latest-version (latest-version local-path)
+          latest-sha (get latest-version :git/sha)
+          local-sha (git-sha local-path)]
+      (when (not= latest-sha local-sha)
+        (process {:command-args ["bin/release"]
+                  :dir local-path})
+        (print-done "released")))
+
+    ;; upgrade deps.edn
+    ))
+
 (defn release! [{:keys []}]
+  (run-tests)
   (assert-git-clean)
   (assert-deps-edn-has-no-local-deps!)
-  (run-tests)
   (git-tag-with-version!)
   (bump-version--bugfix!))
+
+;; (defn trigger-release! [{:keys []}]
+;;   (assert-git-clean)
+;;   (let [git-tag-of-head (git-tag-of-head ".")
+;;         latest-version (-> "version.edn"
+;;                            slurp
+;;                            edn/read-string
+;;                            version->str)]
+;;     (if (= git-tag-of-head (str "v" latest-version))
+;;       (print-done "already released" git-tag-of-head)
+;;       (do
+;;         (process {:command-args ["git" "push"]}))))
+
+;;   (assert-deps-edn-has-no-local-deps!)
+;;   (run-tests)
+;;   (git-tag-with-version!)
+
+;;   (bump-version--bugfix!)
+;;   )
+
+
+
+
+;; * releasing
+
+(defn release-2 [{:keys [project]}]
+  (releasing/release-kunagi-project project))
