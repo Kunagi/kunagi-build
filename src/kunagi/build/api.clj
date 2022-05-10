@@ -9,7 +9,7 @@
    [puget.printer :as puget]
    [borkdude.rewrite-edn :as rw-edn]
    ;;
-))
+   ))
 
 ;; * printing to console
 
@@ -166,7 +166,7 @@
            (reduce (fn [m k]
                      (assoc m
                             (rw-edn/sexpr k)
-                            (rw-edn/sexpr (rw-edn/get deps-node k))))
+                            (rw-edn/sexpr (rw-edn/get deps-node (rw-edn/sexpr k)))))
                    nil)))))
 
 (defn deps-edn-deps-with-local-root
@@ -182,8 +182,7 @@
 
 (comment
   (deps-edn-deps "deps.edn")
-  (deps-edn-deps-with-local-root "deps.edn")
-  )
+  (deps-edn-deps-with-local-root "deps.edn"))
 
 (defn assert-deps-edn-has-no-local-deps!
   ([]
@@ -208,8 +207,33 @@
            (print-done sym "already" local-root-value)
            (let [local-root-value (str "/p/" (name sym))
                  updated-node (rw-edn/assoc-in node [:deps sym] {:local/root local-root-value})]
-             (println (str updated-node))
+             (spit path-to-deps-edn
+                   (str updated-node))
              (print-done sym "switched to" local-root-value))))))))
+
+(defn switch-to-release-deps!
+  ([]
+   (switch-to-release-deps! "deps.edn"))
+  ([path-to-deps-edn]
+   (print-task (str "switch-to-release-deps: " path-to-deps-edn))
+   (let [node (read-edn-file-for-rewrite path-to-deps-edn)
+         deps-with-local-root (deps-edn-deps-with-local-root path-to-deps-edn)]
+     (doseq [sym deps-with-local-root]
+       (let [dep-path-node (rw-edn/get-in node [:deps sym :local/root])
+             dep-path (rw-edn/sexpr dep-path-node)
+             latest-version-file (io/as-file (str dep-path "/" latest-version-edn-file-path))
+             _ (when-not (-> latest-version-file .exists)
+                 (fail! (str "Missing " latest-version-file)))
+             latest-version (read-string (slurp latest-version-file))
+             git-tag (get latest-version :git/tag)
+             git-sha (get latest-version :git/sha)
+             _ (when-not git-sha
+                 (fail! (str "Missing :git/sha in " latest-version-file)))
+             updated-node (rw-edn/assoc-in node [:deps sym] {:git/tag git-tag
+                                                             :git/sha git-sha})]
+         (spit path-to-deps-edn
+               (str updated-node))
+         (print-done sym "switched to" sym git-tag))))))
 
 ;; * JSON
 
