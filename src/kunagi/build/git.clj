@@ -12,14 +12,12 @@
     (when out
       (kb/fail! (str "git directory dirty: " project-path)
                 out))
-    (kb/print-done "git clean: " project-path)
-    ))
+    (kb/print-done "git clean: " project-path)))
 
 (defn push [project-path]
   (kb/process {:command-args ["git" "push"]
                :dir project-path})
-  (kb/print-done "git pushed:" project-path)
-  )
+  (kb/print-done "git pushed:" project-path))
 
 (defn pull-ff [project-path]
   (let [{:keys [out]}
@@ -34,3 +32,11 @@
       (do
         (kb/print-done "git pull - with changes:" project-path)
         true))))
+
+(defn sha [local-repo-path]
+  (let [result (kb/process {:command-args ["git" "rev-parse" "HEAD"]
+                            :dir local-repo-path
+                            :out :capture})
+        git-sha (str/trim (:out result))]
+    (when (str/blank? git-sha) (kb/fail! "Missing Git SHA" result))
+    git-sha))

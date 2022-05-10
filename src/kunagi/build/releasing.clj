@@ -1,6 +1,7 @@
 (ns kunagi.build.releasing
   (:require
    [clojure.java.io :as io]
+   [clojure.edn :as edn]
    [kunagi.build.core :as kb]
    [kunagi.build.git :as git]
    [kunagi.build.deps :as deps]))
@@ -37,12 +38,61 @@
   (kb/process {:command-args ["bin/test"]
                :dir project-path}))
 
+(def version-edn-file-path "version.edn")
+(def latest-version-edn-file-path "latest-version.edn")
+
+(defn version [project-path]
+  (let [file (io/as-file (str project-path "/" version-edn-file-path))]
+    (if-not (-> file .exists)
+      {:major 0 :minor 0 :bugfix 0}
+      (-> file slurp edn/read-string))))
+
+(defn version->str [version]
+  (str (or (-> version :major) 0)
+       "."
+       (or (-> version :minor) 0)
+       "."
+       (or (-> version :bugfix) 0)))
+
+(defn git-tag-with-version [project-path]
+  (let [version (version project-path)
+        git-version-tag (str "v" (version->str version))]
+    (kb/process {:command-args ["git" "tag" git-version-tag]
+                 :dir project-path})
+    (kb/print-done "Git tag created:" git-version-tag)
+    (kb/process {:command-args ["git" "push" "origin" git-version-tag]
+                 :dir project-path})
+    (kb/print-done "Git tag pushed to origin")
+    (let [git-sha (git/sha project-path)]
+      (kb/print-done "Git SHA determined:" git-sha)
+      (spit (str project-path "/" latest-version-edn-file-path)
+            (str (pr-str {:version version
+                          :git/tag git-version-tag
+                          :git/sha git-sha})
+                 "\n"))
+      (kb/print-done "Written" latest-version-edn-file-path))))
+
+(defn bump-version--bugfix [project-path]
+  (kb/print-task "bump-version: bugfix")
+  (let [version (-> (version project-path)
+                    (update :bugfix inc))]
+    (spit (str project-path "/" version-edn-file-path)
+          (str (-> version pr-str)
+               "\n"))
+    (kb/process {:command-args ["git" "add" version-edn-file-path latest-version-edn-file-path]
+                 :dir project-path})
+    (kb/process {:command-args ["git" "commit" "-m" (str "[version bump] to " (version->str version))]
+                 :dir project-path})
+    (kb/process {:command-args ["git" "push"]
+                 :dir project-path})
+    (kb/print-done "Bumped to" (version->str version))))
+
 (defn build-kunagi-project-release [path]
   (kb/print-task (str "build release: " path))
   (run-tests path)
   (deps/assert-no-local-deps path)
-  ;; (git-tag-with-version!)
-  ;; (bump-version--bugfix!)
+  (git-tag-with-version path)
+  (bump-version--bugfix path)
   )
 
 (defn release-kunagi-project [sym]

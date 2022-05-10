@@ -105,17 +105,6 @@
 
 ;; * EDN (with rewrite)
 
-(defn read-edn-file-for-rewrite [path]
-  (let [file (io/as-file path)]
-    (when (-> file .exists)
-      (-> file
-          slurp
-          rw-edn/parse-string))))
-
-(comment
-  (def _deps-file (read-edn-file-for-rewrite "deps.edn"))
-  (def _deps (rw-edn/get _deps-file :deps))
-  (rw-edn/keys _deps))
 
 ;; * deps
 
