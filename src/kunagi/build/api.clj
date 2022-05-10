@@ -9,6 +9,7 @@
    [puget.printer :as puget]
    [borkdude.rewrite-edn :as rw-edn]
    [kunagi.build.core :as kb]
+   [kunagi.build.deps :as deps]
    ;;
 
    [kunagi.build.releasing :as releasing]))
@@ -108,21 +109,21 @@
 
 ;; * deps
 
-(defn deps-edn-deps
-  [path-to-deps-edn]
-  (when-let [node (read-edn-file-for-rewrite path-to-deps-edn)]
-    (when-let [deps-node (rw-edn/get node :deps)]
-      (->> (rw-edn/keys deps-node)
-           (reduce (fn [m k]
-                     (assoc m
-                            (rw-edn/sexpr k)
-                            (rw-edn/sexpr (rw-edn/get deps-node (rw-edn/sexpr k)))))
-                   nil)))))
+;; (defn deps-edn-deps
+;;   [path-to-deps-edn]
+;;   (when-let [node (read-edn-file-for-rewrite path-to-deps-edn)]
+;;     (when-let [deps-node (rw-edn/get node :deps)]
+;;       (->> (rw-edn/keys deps-node)
+;;            (reduce (fn [m k]
+;;                      (assoc m
+;;                             (rw-edn/sexpr k)
+;;                             (rw-edn/sexpr (rw-edn/get deps-node (rw-edn/sexpr k)))))
+;;                    nil)))))
 
 (defn deps-edn-deps-with-local-root
   [path-to-deps-edn]
   (->> path-to-deps-edn
-       deps-edn-deps
+       deps/deps
        (reduce (fn [acc [k v]]
                  (if (get v :local/root)
                    (conj acc k)
@@ -130,24 +131,12 @@
                nil)
        seq))
 
-(comment
-  (deps-edn-deps "deps.edn")
-  (deps-edn-deps-with-local-root "deps.edn"))
-
-(defn assert-deps-edn-has-no-local-deps!
-  ([]
-   (assert-deps-edn-has-no-local-deps! "deps.edn"))
-  ([path-to-deps-edn]
-   (print-task "assert-deps-edn-has-no-local-deps")
-   (when-let [deps (deps-edn-deps-with-local-root path-to-deps-edn)]
-     (fail! (str/join ", " deps)))))
-
 (defn switch-to-local-deps!
   ([dep-symbols]
    (switch-to-local-deps! "deps.edn" dep-symbols))
   ([path-to-deps-edn dep-symbols]
    (print-task (str "switch-to-local-deps: " path-to-deps-edn))
-   (let [node (read-edn-file-for-rewrite path-to-deps-edn)
+   (let [node (kb/read-edn-file-for-rewrite path-to-deps-edn)
          deps-node (rw-edn/get node :deps)]
      (doseq [sym dep-symbols]
        (let [coord-node (rw-edn/get deps-node sym)
@@ -176,7 +165,7 @@
    (switch-to-release-deps! "deps.edn"))
   ([path-to-deps-edn]
    (print-task (str "switch-to-release-deps: " path-to-deps-edn))
-   (let [node (read-edn-file-for-rewrite path-to-deps-edn)
+   (let [node (kb/read-edn-file-for-rewrite path-to-deps-edn)
          deps-with-local-root (deps-edn-deps-with-local-root path-to-deps-edn)]
      (doseq [sym deps-with-local-root]
        (let [dep-path-node (rw-edn/get-in node [:deps sym :local/root])
@@ -192,7 +181,7 @@
 
 (defn set-deps-edn-dep-to-sha [sym git-sha git-tag]
   (print-task (str "set-deps-edn-dep-to-sha: " sym git-tag))
-  (let [node (read-edn-file-for-rewrite "deps.edn")
+  (let [node (kb/read-edn-file-for-rewrite "deps.edn")
         current-sha (rw-edn/get-in node [:deps sym :git/sha])]
     (if (= git-sha current-sha)
       (print-done sym "already on" git-tag)
@@ -237,43 +226,43 @@
 
 ;; * releasing
 
-(defn prepare-local-dependency! [sym]
-  (print-task (str "prepare-local-dependency" sym))
-  (let [local-path (str "/p/" (name sym))]
+;; (defn prepare-local-dependency! [sym]
+;;   (print-task (str "prepare-local-dependency" sym))
+;;   (let [local-path (str "/p/" (name sym))]
 
-    ;; assert git clean
-    (let [{:keys [out]}
-          (process {:command-args ["git" "status" "-s"]
-                    :out :capture
-                    :dir local-path})]
-      (when out
-        (fail! "git directory dirty" out)))
-    (print-done "git is clean")
+;;     ;; assert git clean
+;;     (let [{:keys [out]}
+;;           (process {:command-args ["git" "status" "-s"]
+;;                     :out :capture
+;;                     :dir local-path})]
+;;       (when out
+;;         (fail! "git directory dirty" out)))
+;;     (print-done "git is clean")
 
-    ;; git pull
-    (process {:command-args ["git" "pull"]
-              :dir local-path})
-    (print-done "local git repo updated")
+;;     ;; git pull
+;;     (process {:command-args ["git" "pull"]
+;;               :dir local-path})
+;;     (print-done "local git repo updated")
 
-    ;; release if has changes
-    (let [latest-version (latest-version local-path)
-          latest-sha (get latest-version :git/sha)
-          local-sha (git-sha local-path)]
-      (when (not= latest-sha local-sha)
-        (process {:command-args ["bin/release"]
-                  :dir local-path})
-        (print-done "released")))
+;;     ;; release if has changes
+;;     (let [latest-version (latest-version local-path)
+;;           latest-sha (get latest-version :git/sha)
+;;           local-sha (git-sha local-path)]
+;;       (when (not= latest-sha local-sha)
+;;         (process {:command-args ["bin/release"]
+;;                   :dir local-path})
+;;         (print-done "released")))
 
-    ;; upgrade deps.edn
-    ))
+;;     ;; upgrade deps.edn
+;;     ))
 
-(defn release! [{:keys []}]
-  ;; (run-tests)
-  (assert-git-clean)
-  (assert-deps-edn-has-no-local-deps!)
-  (git-tag-with-version!)
-  (bump-version--bugfix!)
-  )
+;; (defn release! [{:keys []}]
+;;   ;; (run-tests)
+;;   (assert-git-clean)
+;;   (assert-deps-edn-has-no-local-deps!)
+;;   (git-tag-with-version!)
+;;   (bump-version--bugfix!)
+;;   )
 
 ;; (defn trigger-release! [{:keys []}]
 ;;   (assert-git-clean)
