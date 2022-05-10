@@ -102,6 +102,7 @@
   (git/pull-ff project-path))
 
 (defn release-kunagi-project [sym]
+  (kb/print-ubertask (str "release: " (name sym)))
   (assert-kunagi-project-ready-for-release sym)
   (let [files-changed? (update-kunagi-project-release-repo sym)]
     (when files-changed?

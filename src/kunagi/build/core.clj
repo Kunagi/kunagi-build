@@ -24,6 +24,10 @@
   (println)
   (println (c/on-blue (c/white (c/bold (str " " task-name " "))))))
 
+(defn print-ubertask [task-name]
+  (println)
+  (println (c/on-green (c/white (c/bold (str " *** " task-name " *** "))))))
+
 (defn print-debug [data]
   (puget/cprint data))
 
