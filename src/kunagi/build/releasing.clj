@@ -28,13 +28,13 @@
 
 (defn update-kunagi-project-release-repo [sym]
   (let [release-path (release-path sym)]
-    (kb/print-task (str "update release repo: " release-path))
+    (kb/print-task "update release repo")
     (kb/assert! (-> release-path io/as-file .exists)
                 "Release git exists:" release-path)
     (git/pull-ff release-path)))
 
 (defn run-tests [project-path]
-  (kb/print-task (str "run tests: " project-path))
+  (kb/print-task "run tests")
   (kb/process {:command-args ["bin/test"]
                :dir project-path}))
 
@@ -88,18 +88,23 @@
     (kb/print-done "Bumped to" (version->str version))))
 
 (defn build-kunagi-project-release [path]
-  (kb/print-task (str "build release: " path))
+  (kb/print-task "build release")
   (run-tests path)
   (deps/assert-no-local-deps path)
   (git-tag-with-version path)
   (bump-version--bugfix path)
   )
 
+(defn update-kunagi-project-after-release [project-path]
+  (kb/print-task "update dev project")
+  (git/pull-ff project-path))
+
 (defn release-kunagi-project [sym]
   (assert-kunagi-project-ready-for-release sym)
   (let [files-changed? (update-kunagi-project-release-repo sym)]
     (when files-changed?
-      (build-kunagi-project-release (release-path sym)))))
+      (build-kunagi-project-release (release-path sym))
+      (update-kunagi-project-after-release (project-path sym)))))
 
 (comment
   (release-kunagi-project 'kunagi-build))
