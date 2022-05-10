@@ -3,8 +3,7 @@
         io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}
         clojure-term-colors/clojure-term-colors {:mvn/version "0.1.0"}
         mvxcvi/puget {:mvn/version "1.3.2"}
-        ;; borkdude/rewrite-edn {:mvn/version "0.2.0"}
-        ;; bordkude/rewrite-edn {:local/root "../rewrite-edn"}
+        io.github.borkdude/rewrite-edn {:git/sha "db6ea4b728f91ac164d80a705359d638f83fd8ea"}
         org.clojure/data.json {:mvn/version "2.4.0"}
         ;;
         }
@@ -15,9 +14,8 @@
                  io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}
                  clojure-term-colors/clojure-term-colors {:mvn/version "0.1.0"}
                  mvxcvi/puget {:mvn/version "1.3.2"}
-        ;; borkdude/rewrite-edn {:mvn/version "0.2.0"}
-                 bordkude/rewrite-edn {:local/root "../rewrite-edn"}
+                 io.github.borkdude/rewrite-edn {:git/sha "db6ea4b728f91ac164d80a705359d638f83fd8ea"}
                  org.clojure/data.json {:mvn/version "2.4.0"}
-        ;;
+                 ;;
                  }
           :ns-default build}}}
