@@ -57,6 +57,7 @@
 (defn git-tag-with-version [project-path]
   (let [version (version project-path)
         git-version-tag (str "v" (version->str version))]
+    (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
                  :dir project-path})
     (kb/print-done "Git tag created:" git-version-tag)
@@ -90,6 +91,7 @@
 (defn build-kunagi-project-release [path]
   (kb/print-task "build release")
   (run-tests path)
+  (kb/print-task "assert no local deps")
   (deps/assert-no-local-deps path)
   (git-tag-with-version path)
   (bump-version--bugfix path)

@@ -29,6 +29,5 @@
 
 (defn assert-no-local-deps
   [project-path]
-  (kb/print-task (str "assert no local deps: " project-path))
-   (when-let [deps (deps-with-local-root project-path)]
-     (kb/fail! (str/join ", " deps))))
+  (when-let [deps (deps-with-local-root project-path)]
+    (kb/fail! (str/join ", " deps))))
