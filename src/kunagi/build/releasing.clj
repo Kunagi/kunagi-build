@@ -136,6 +136,7 @@
             false deps)))
 
 (defn release-kunagi-project [opts]
+  (kb/print-debug {:opts opts})
   (let [sym (-> opts :project)]
     (assert sym)
     (kb/print-ubertask (name sym))

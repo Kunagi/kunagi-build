@@ -59,7 +59,8 @@
 
 ;; * releasing
 
-(defn release [{:keys [project]}]
-  (releasing/release-kunagi-project project))
+(defn release [opts]
+  (kb/print-debug {:opts opts})
+  (releasing/release-kunagi-project opts))
 
 (def release-2 release)
