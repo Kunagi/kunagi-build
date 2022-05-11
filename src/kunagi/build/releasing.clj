@@ -111,7 +111,7 @@
   (kb/print-task "assert no local deps")
   (deps/assert-no-local-deps path)
   (git-tag-with-version path opts)
-  (bump-version--bugfix path))
+  (bump-version--bugfix path opts))
 
 (defn update-kunagi-project-after-release [project-path]
   (kb/print-task "update dev project")
