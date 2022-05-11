@@ -55,9 +55,12 @@
        "."
        (or (-> version :bugfix) 0)))
 
-(defn git-tag-with-version [project-path]
+(defn git-tag-with-version [project-path opts]
   (let [version (version project-path)
-        git-version-tag (str "v" (version->str version))]
+        git-version-tag (str "v" (version->str version))
+        ts (-> (kb/process {:command-args ["date" "-Iminutes"]
+                            :out :capture})
+               :out)]
     (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
                  :dir project-path})
@@ -70,9 +73,16 @@
       (spit (str project-path "/" latest-version-edn-file-path)
             (str (pr-str {:version version
                           :git/tag git-version-tag
-                          :git/sha git-sha})
+                          :git/sha git-sha
+                          :timestamp ts})
                  "\n"))
-      (kb/print-done "Written" latest-version-edn-file-path))))
+      (kb/print-done "Written" latest-version-edn-file-path)
+      (when-let [version-txt-path (-> opts :version-txt-path)]
+        (spit version-txt-path (version->str version))
+        (kb/print-done version-txt-path "written"))
+      (when-let [version-time-path (-> opts :version-time-path)]
+        (spit version-time-path ts)
+        (kb/print-done version-time-path "written")))))
 
 (defn bump-version--bugfix [project-path]
   (kb/print-task "bump-version: bugfix")
@@ -89,14 +99,13 @@
                  :dir project-path})
     (kb/print-done "Bumped to" (version->str version))))
 
-(defn build-kunagi-project-release [path]
+(defn build-kunagi-project-release [path opts]
   (kb/print-task "build release")
   (run-tests path)
   (kb/print-task "assert no local deps")
   (deps/assert-no-local-deps path)
-  (git-tag-with-version path)
-  (bump-version--bugfix path)
-  )
+  (git-tag-with-version path opts)
+  (bump-version--bugfix path))
 
 (defn update-kunagi-project-after-release [project-path]
   (kb/print-task "update dev project")
@@ -126,18 +135,21 @@
                 acc))
             false deps)))
 
-(defn release-kunagi-project [sym]
-  (kb/print-ubertask (name sym))
-  (assert-kunagi-project-ready-for-release sym)
-  (let [files-changed? (update-kunagi-project-release-repo sym)
-        deps-upgraded? (upgrade-kunagi-project-deps (release-path sym))]
-    (when deps-upgraded?
-      (git/commit-and-push (release-path sym) ["deps.edn"] "[deps]"))
+(defn release-kunagi-project [opts]
+  (let [sym (-> opts :project)]
+    (assert sym)
+    (kb/print-ubertask (name sym))
+    (assert-kunagi-project-ready-for-release sym)
+    (let [files-changed? (update-kunagi-project-release-repo sym)
+          deps-upgraded? (upgrade-kunagi-project-deps (release-path sym))]
+      (when deps-upgraded?
+        (git/commit-and-push (release-path sym) ["deps.edn"] "[deps]"))
 
-    (when (or files-changed?
-              deps-upgraded?)
-      (build-kunagi-project-release (release-path sym))
-      (update-kunagi-project-after-release (project-path sym)))))
+      (when (or files-changed?
+                deps-upgraded?)
+        (build-kunagi-project-release (release-path sym)
+                                      opts)
+        (update-kunagi-project-after-release (project-path sym))))))
 
 (comment
   (release-kunagi-project 'kunagi-build))

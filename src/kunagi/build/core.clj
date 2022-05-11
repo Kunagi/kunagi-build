@@ -14,7 +14,9 @@
 ;; * printing to console
 
 (defn print-done [& ss]
+  (print "[")
   (print (c/green (c/bold "✓ ")))
+  (print "]")
   (doseq [s ss]
     (print s)
     (print " "))
@@ -26,7 +28,8 @@
 
 (defn print-ubertask [task-name]
   (println)
-  (println (c/on-green (c/white (c/bold (str " *** " task-name " *** "))))))
+  (println "   " (c/on-green (c/white (c/bold task-name ))) "   ")
+  (println))
 
 (defn print-debug [data]
   (puget/cprint data))
