@@ -24,7 +24,8 @@
 
 (defn assert-kunagi-project-ready-for-release [sym]
   (let [project-path (project-path sym)]
-    (assert-kunagi-project-path-ready-for-release project-path)))
+    (assert-kunagi-project-path-ready-for-release project-path)
+    (git/assert-clean (release-path sym))))
 
 (defn update-kunagi-project-release-repo [sym]
   (let [release-path (release-path sym)]
