@@ -1,13 +1,3 @@
 #!/bin/bash -e
 
-git push
-
-rm -rf release
-git clone . release --branch release
-cd release
-git merge origin/main
 clojure -T:build release
-git push --set-upstream origin release
-
-cd ..
-git merge release
