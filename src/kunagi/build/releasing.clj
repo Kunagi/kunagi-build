@@ -102,7 +102,20 @@
   (git/pull-ff project-path))
 
 (defn upgrade-kunagi-project-dep [project-path dep-sym current-sha]
-  (kb/print-debug [ "dep" dep-sym current-sha])
+  (let [latest-version (-> (str (release-path dep-sym) "/" latest-version-edn-file-path)
+                           slurp
+                           edn/read-string)
+        latest-sha (-> latest-version :git/sha)
+        latest-tag (-> latest-version :git/tag)]
+    (if (= current-sha latest-sha)
+      (do
+        (kb/print-done (str "dependency " (name dep-sym) " up to date"))
+        false)
+      (do
+        (deps/set-dep project-path dep-sym {:git/sha latest-sha
+                                            :git/tag latest-tag})
+        true))
+    (kb/print-debug [ "dep" dep-sym current-sha]))
   )
 
 (defn upgrade-kunagi-project-deps [project-path]

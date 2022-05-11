@@ -31,3 +31,11 @@
   [project-path]
   (when-let [deps (deps-with-local-root project-path)]
     (kb/fail! (str/join ", " deps))))
+
+(defn set-dep [project-path sym new-coord]
+  (let [path-to-deps-edn (str project-path "/deps.edn")
+        node (kb/read-edn-file-for-rewrite path-to-deps-edn)
+        updated-node (rw-edn/assoc-in node [:deps sym] new-coord)]
+    (spit path-to-deps-edn
+          (str updated-node))
+    (kb/print-done "dependency" sym "changed to" new-coord)))
