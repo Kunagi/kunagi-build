@@ -86,14 +86,18 @@
         (spit (str project-path "/" version-time-path) ts)
         (kb/print-done version-time-path "written")))))
 
-(defn bump-version--bugfix [project-path]
+(defn bump-version--bugfix [project-path opts]
   (kb/print-task "bump-version: bugfix")
   (let [version (-> (version project-path)
                     (update :bugfix inc))]
     (spit (str project-path "/" version-edn-file-path)
           (str (-> version pr-str)
                "\n"))
-    (kb/process {:command-args ["git" "add" version-edn-file-path latest-version-edn-file-path]
+    (kb/process {:command-args (->> ["git" "add"
+                                     version-edn-file-path latest-version-edn-file-path
+                                     (-> opts :version-txt-path)
+                                     (-> opts :version-time-path)]
+                                    (remove nil?))
                  :dir project-path})
     (kb/process {:command-args ["git" "commit" "-m" (str "[version bump] to " (version->str version))]
                  :dir project-path})
