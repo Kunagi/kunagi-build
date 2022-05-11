@@ -77,11 +77,13 @@
                           :timestamp ts})
                  "\n"))
       (kb/print-done "Written" latest-version-edn-file-path)
+
       (when-let [version-txt-path (-> opts :version-txt-path)]
-        (spit version-txt-path (version->str version))
+        (spit (str project-path "/" version-txt-path) (version->str version))
         (kb/print-done version-txt-path "written"))
+
       (when-let [version-time-path (-> opts :version-time-path)]
-        (spit version-time-path ts)
+        (spit (str project-path "/" version-time-path) ts)
         (kb/print-done version-time-path "written")))))
 
 (defn bump-version--bugfix [project-path]

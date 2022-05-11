@@ -15,8 +15,8 @@
 
 (defn print-done [& ss]
   (print "[")
-  (print (c/green (c/bold "✓ ")))
-  (print "]")
+  (print (c/green (c/bold "✓")))
+  (print "] ")
   (doseq [s ss]
     (print s)
     (print " "))
