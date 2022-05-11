@@ -40,3 +40,10 @@
         git-sha (str/trim (:out result))]
     (when (str/blank? git-sha) (kb/fail! "Missing Git SHA" result))
     git-sha))
+
+(defn commit [local-repo-path files commit-comment]
+  (kb/process {:command-args (into ["git" "commit"
+                                    "-m" commit-comment]
+                                   files)
+               :dir local-repo-path})
+  (kb/print-done "git commit" files))

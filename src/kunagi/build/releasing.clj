@@ -101,11 +101,28 @@
   (kb/print-task "update dev project")
   (git/pull-ff project-path))
 
+(defn upgrade-kunagi-project-dep [project-path dep-sym current-sha]
+  (kb/print-debug [ "dep" dep-sym current-sha])
+  )
+
+(defn upgrade-kunagi-project-deps [project-path]
+  (let [deps (deps/deps project-path)]
+    (reduce (fn [acc [sym coord]]
+              (if (-> sym namespace (= "io.github.kunagi"))
+                (or (upgrade-kunagi-project-dep project-path sym (-> coord :git/sha))
+                    acc)
+                acc))
+            false deps)))
+
 (defn release-kunagi-project [sym]
   (kb/print-ubertask (str "release: " (name sym)))
   (assert-kunagi-project-ready-for-release sym)
-  (let [files-changed? (update-kunagi-project-release-repo sym)]
-    (when files-changed?
+  (let [files-changed? (update-kunagi-project-release-repo sym)
+        deps-upgraded? (upgrade-kunagi-project-deps (release-path sym))]
+    (when deps-upgraded?
+      (git/commit (release-path sym) ["deps.edn"] "[deps]"))
+    (when (or files-changed?
+              deps-upgraded?)
       (build-kunagi-project-release (release-path sym))
       (update-kunagi-project-after-release (project-path sym)))))
 
