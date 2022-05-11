@@ -127,7 +127,7 @@
             false deps)))
 
 (defn release-kunagi-project [sym]
-  (kb/print-ubertask (str "release: " (name sym)))
+  (kb/print-ubertask (name sym))
   (assert-kunagi-project-ready-for-release sym)
   (let [files-changed? (update-kunagi-project-release-repo sym)
         deps-upgraded? (upgrade-kunagi-project-deps (release-path sym))]

@@ -41,6 +41,13 @@
     (when (str/blank? git-sha) (kb/fail! "Missing Git SHA" result))
     git-sha))
 
+(defn tag-of-head [local-repo-path]
+  (let [result (kb/process {:command-args ["git" "tag" "-l" "--contains" "HEAD"]
+                            :dir local-repo-path
+                            :out :capture})
+        tag (str/trim (:out result))]
+    tag))
+
 (defn commit [local-repo-path files commit-comment]
   (kb/process {:command-args (into ["git" "commit"
                                     "-m" commit-comment]

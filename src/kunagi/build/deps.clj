@@ -39,3 +39,43 @@
     (spit path-to-deps-edn
           (str updated-node))
     (kb/print-done "dependency" sym "changed to" new-coord)))
+
+
+;; (defn switch-to-local-deps!
+;;   ([dep-symbols]
+;;    (switch-to-local-deps! "deps.edn" dep-symbols))
+;;   ([path-to-deps-edn dep-symbols]
+;;    (print-task (str "switch-to-local-deps: " path-to-deps-edn))
+;;    (let [node (kb/read-edn-file-for-rewrite path-to-deps-edn)
+;;          deps-node (rw-edn/get node :deps)]
+;;      (doseq [sym dep-symbols]
+;;        (let [coord-node (rw-edn/get deps-node sym)
+;;              coord (rw-edn/sexpr coord-node)
+;;              local-root-value (get coord :local/root)]
+;;          (if local-root-value
+;;            (print-done sym "already" local-root-value)
+;;            (let [local-root-value (str "/p/" (name sym))
+;;                  updated-node (rw-edn/assoc-in node [:deps sym] {:local/root local-root-value})]
+;;              (spit path-to-deps-edn
+;;                    (str updated-node))
+;;              (print-done sym "switched to" local-root-value))))))))
+
+
+;; (defn switch-to-release-deps!
+;;   ([]
+;;    (switch-to-release-deps! "deps.edn"))
+;;   ([path-to-deps-edn]
+;;    (kb/print-task (str "switch-to-release-deps: " path-to-deps-edn))
+;;    (let [node (kb/read-edn-file-for-rewrite path-to-deps-edn)
+;;          deps-with-local-root (deps-edn-deps-with-local-root path-to-deps-edn)]
+;;      (doseq [sym deps-with-local-root]
+;;        (let [dep-path-node (rw-edn/get-in node [:deps sym :local/root])
+;;              dep-path (rw-edn/sexpr dep-path-node)
+;;              latest-version (latest-version dep-path)
+;;              git-tag (get latest-version :git/tag)
+;;              git-sha (get latest-version :git/sha)
+;;              updated-node (rw-edn/assoc-in node [:deps sym] {:git/tag git-tag
+;;                                                              :git/sha git-sha})]
+;;          (spit path-to-deps-edn
+;;                (str updated-node))
+;;          (print-done sym "switched to" sym git-tag))))))

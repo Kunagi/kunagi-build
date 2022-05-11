@@ -7,5 +7,5 @@
    ))
 
 (defn release [{:keys []}]
-  (kb/release-2 {:project 'kunagi-build})
+  (kb/release {:project 'kunagi-build})
   )
