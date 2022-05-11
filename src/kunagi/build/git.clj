@@ -47,3 +47,7 @@
                                    files)
                :dir local-repo-path})
   (kb/print-done "git commit" files))
+
+(defn commit-and-push [local-repo-path files commit-comment]
+  (commit local-repo-path files commit-comment)
+  (push local-repo-path))

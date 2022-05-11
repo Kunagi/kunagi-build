@@ -114,9 +114,7 @@
       (do
         (deps/set-dep project-path dep-sym {:git/sha latest-sha
                                             :git/tag latest-tag})
-        true))
-    (kb/print-debug [ "dep" dep-sym current-sha]))
-  )
+        true))))
 
 (defn upgrade-kunagi-project-deps [project-path]
   (let [deps (deps/deps project-path)]
@@ -133,7 +131,8 @@
   (let [files-changed? (update-kunagi-project-release-repo sym)
         deps-upgraded? (upgrade-kunagi-project-deps (release-path sym))]
     (when deps-upgraded?
-      (git/commit (release-path sym) ["deps.edn"] "[deps]"))
+      (git/commit-and-push (release-path sym) ["deps.edn"] "[deps]"))
+
     (when (or files-changed?
               deps-upgraded?)
       (build-kunagi-project-release (release-path sym))
