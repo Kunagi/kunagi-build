@@ -7,6 +7,5 @@
    ))
 
 (defn release [{:keys []}]
-  (kb/print-debug "test")
   (kb/release {:project 'kunagi-build})
   )

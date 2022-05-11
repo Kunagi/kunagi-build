@@ -60,7 +60,6 @@
 ;; * releasing
 
 (defn release [opts]
-  (kb/print-debug {:opts opts})
   (releasing/release-kunagi-project opts))
 
 (def release-2 release)
