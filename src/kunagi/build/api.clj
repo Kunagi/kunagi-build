@@ -54,6 +54,7 @@
 (defn npm-reinstall! []
   (print-task "npm-reinstall")
   (b/delete {:path "node_modules"})
+  (b/delete {:path "package-lock.json"})
   (process {:command-args ["npm" "install"]}))
 
 
@@ -61,5 +62,3 @@
 
 (defn release [opts]
   (releasing/release-kunagi-project opts))
-
-(def release-2 release)
