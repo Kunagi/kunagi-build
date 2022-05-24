@@ -24,8 +24,7 @@
 
 (defn assert-kunagi-project-ready-for-release [sym]
   (let [project-path (project-path sym)]
-    (assert-kunagi-project-path-ready-for-release project-path)
-    (git/assert-clean (release-path sym))))
+    (assert-kunagi-project-path-ready-for-release project-path)))
 
 (defn update-kunagi-project-release-repo [sym]
   (let [release-path (release-path sym)]
@@ -33,6 +32,7 @@
     (kb/assert! (-> release-path io/as-file .exists)
                 "Release git exists:" release-path)
     (git/reset release-path)
+    (git/assert-clean (release-path sym))
     (git/pull-ff release-path)))
 
 (defn run-tests [project-path]
