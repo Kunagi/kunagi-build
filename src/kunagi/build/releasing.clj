@@ -32,6 +32,7 @@
     (kb/print-task "update release repo")
     (kb/assert! (-> release-path io/as-file .exists)
                 "Release git exists:" release-path)
+    (git/reset release-path)
     (git/pull-ff release-path)))
 
 (defn run-tests [project-path]

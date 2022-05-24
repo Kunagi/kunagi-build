@@ -19,6 +19,11 @@
                :dir project-path})
   (kb/print-done "git pushed:" project-path))
 
+(defn reset [project-path]
+  (kb/process {:command-args ["git" "reset" "--hard"]
+               :dir project-path})
+  (kb/print-done "git reset:" project-path))
+
 (defn pull-ff [project-path]
   (let [{:keys [out]}
         (kb/process {:command-args ["git" "pull" "--ff-only"]
