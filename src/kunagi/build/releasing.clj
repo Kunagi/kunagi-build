@@ -59,9 +59,10 @@
 (defn git-tag-with-version [project-path opts]
   (let [version (version project-path)
         git-version-tag (str "v" (version->str version))
-        ts (-> (kb/process {:command-args ["date" "-Iminutes"]
-                            :out :capture})
-               :out)]
+        ;; ts (-> (kb/process {:command-args ["date" "-Iminutes"]
+        ;;                     :out :capture})
+        ;;        :out)
+        ts (-> (java.util.Date.) .toString)]
     (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
                  :dir project-path})
