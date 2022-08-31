@@ -62,7 +62,10 @@
         ;; ts (-> (kb/process {:command-args ["date" "-Iminutes"]
         ;;                     :out :capture})
         ;;        :out)
-        ts (-> (java.util.Date.) .toString)]
+        ;; ts (-> (java.util.Date.) .toString)
+        ts (-> java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
+               (.format (java.time.OffsetDateTime/now)))
+        ]
     (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
                  :dir project-path})
