@@ -65,6 +65,8 @@
         ;; ts (-> (java.util.Date.) .toString)
         ts (-> java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
                (.format (java.time.OffsetDateTime/now)))
+        ts (-> ts
+               (.substring 0 (-> ts (.indexOf "."))))
         ]
     (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
