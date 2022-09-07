@@ -59,14 +59,14 @@
 (defn git-tag-with-version [project-path opts]
   (let [version (version project-path)
         git-version-tag (str "v" (version->str version))
-        ;; ts (-> (kb/process {:command-args ["date" "-Iminutes"]
-        ;;                     :out :capture})
-        ;;        :out)
+        ts (-> (kb/process {:command-args ["date" "-Iminutes"]
+                            :out :capture})
+               :out)
         ;; ts (-> (java.util.Date.) .toString)
-        ts (-> java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
-               (.format (java.time.LocalDateTime/now)))
-        ts (-> ts
-               (.substring 0 (-> ts (.indexOf "."))))
+        ;; ts (-> java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
+        ;;        (.format (java.time.LocalDateTime/now)))
+        ;; ts (-> ts
+        ;;        (.substring 0 (-> ts (.indexOf "."))))
         ]
     (kb/print-task "tag with version")
     (kb/process {:command-args ["git" "tag" git-version-tag]
@@ -90,7 +90,7 @@
         (kb/print-done version-txt-path "written"))
 
       (when-let [version-time-path (-> opts :version-time-path)]
-        (spit (str project-path "/" version-time-path) ts)
+        (spit (str project-path "/" version-time-path) (str (System/currentTimeMillis)))
         (kb/print-done version-time-path "written")))))
 
 (defn bump-version--bugfix [project-path opts]
