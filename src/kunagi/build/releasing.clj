@@ -64,7 +64,7 @@
         ;;        :out)
         ;; ts (-> (java.util.Date.) .toString)
         ts (-> java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
-               (.format (java.time.OffsetDateTime/now)))
+               (.format (java.time.LocalDateTime/now)))
         ts (-> ts
                (.substring 0 (-> ts (.indexOf "."))))
         ]
