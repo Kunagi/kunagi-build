@@ -28,7 +28,7 @@
 
 (defn print-ubertask [task-name]
   (println)
-  (println "   " (c/on-green (c/white (c/bold task-name ))) "   ")
+  (println "   " (c/on-green (c/white (c/bold (str " **********     " task-name "     ********** ")))) "   ")
   (println))
 
 (defn print-debug [data]
