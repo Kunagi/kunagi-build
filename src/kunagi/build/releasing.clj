@@ -152,7 +152,7 @@
   (let [sym (-> opts :project)]
     (assert sym)
     (kb/print-ubertask (name sym))
-    (java.lang.Thread/sleep 3000)
+    (java.lang.Thread/sleep 10000)
     (assert-kunagi-project-ready-for-release sym)
     (git/pull-ff (project-path sym))
     (let [files-changed? (update-kunagi-project-release-repo sym)
