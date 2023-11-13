@@ -132,11 +132,12 @@
         latest-tag (-> latest-version :git/tag)]
     (if (= current-sha latest-sha)
       (do
-        (kb/print-done (str "dependency " (name dep-sym) " up to date"))
+        (kb/print-done (str "dependency " (name dep-sym) " up to date: " latest-tag " " latest-sha))
         false)
       (do
         (deps/set-dep project-path dep-sym {:git/sha latest-sha
                                             :git/tag latest-tag})
+        (kb/print-done (str "dependency " (name dep-sym) " updated: " latest-tag " " latest-sha))
         true))))
 
 (defn upgrade-kunagi-project-deps [project-path]
